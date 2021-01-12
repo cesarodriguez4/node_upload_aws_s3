@@ -1,0 +1,15 @@
+{
+  "name": "node_upload_aws_s3",
+  "version": "1.0.0",
+  "description": "Compress JPEG, convert to WEB and upload both JPG/PNG and webp images to a AWS S3 Bucket",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Cesar Rodriguez",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.825.0",
+    "gm": "^1.23.1"
+  }
+}
