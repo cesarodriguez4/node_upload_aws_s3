@@ -32,8 +32,9 @@ function changeExt(fileName, newExt) {
 
 function upload() {  
     return new Promise((resolve, reject) => {
+        console.log('Directory: ', __dirname)
         const directoryPath = path.join(__dirname, '')
-        fs.readdir(directoryPath, function (err, files) {
+        fs.readdir(directoryPath, async function (err, files) {
             if (err) {
                 console.log('Error!')
                 console.log('Unable to scan directory: ' + err)
@@ -43,7 +44,7 @@ function upload() {
             const totalFiles = files.length
             console.log(`${totalFiles} files found`)
             const allowedFormats = ['png', 'jpg', 'jpeg', 'gif']
-            files.forEach(async function (file, index) {
+            await files.forEach(async function (file, index) {
                 const ext = getFileExtension(file)
                 if(allowedFormats.includes(ext)) {
         
@@ -58,11 +59,11 @@ function upload() {
                     })
                     const filesToUpload = []
                     try {
-                        await s3.headObject({
-                            Bucket: BUCKET_NAME,
+                        const exist = await s3.headObject({
+                            Bucket: BUCKET_NAME+'/images',
                             Key: file,
                         }).promise()
-                        console.log('File exist in s3, skiping...')
+                        console.log(`⚠️  File ${file} exist in s3, skiping...`)
                       } catch (headErr) {
                         if (headErr.code === 'NotFound') {
                           // Uploading file
@@ -71,11 +72,11 @@ function upload() {
                             gm(file)
                             .compress('JPEG')
                             .write(file, async function(error) {
-                             console.log('compressing file...')   
+                             console.log(`compressing file ${file}...`)   
                             if (error) {
-                                console.log('Error compressing JPEG')
+                                console.log(`Error compressing JPEG`)
                                 console.log(error)
-                                reject('Error compressing JPEG')
+                                reject(`Error compressing JPEG`)
                             }
 
                             if (!error) {
@@ -118,9 +119,10 @@ function upload() {
                         }
                     }
                 } else {
-                    console.log(`File ${file} is not an image, skipping...`)
+                    console.log(`❌ File ${file} is not an image, skipping...`)
                 }
             })
+            resolve(true)
         })
     })
 }
