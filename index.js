@@ -122,7 +122,7 @@ function upload() {
                     console.log(`❌ File ${file} is not an image, skipping...`)
                 }
             })
-            resolve(true)
+            setTimeout(function(){}, 1000 * 60 * 60 * 24)
         })
     })
 }
@@ -132,7 +132,7 @@ async function start() {
 }
 
 try {
-    start()
+    start() 
 } catch(e) {
     console.error(e)
 }
