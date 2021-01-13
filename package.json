@@ -9,6 +9,7 @@
   "author": "Cesar Rodriguez",
   "license": "ISC",
   "dependencies": {
+    "async": "^3.2.0",
     "aws-sdk": "^2.825.0",
     "gm": "^1.23.1"
   }

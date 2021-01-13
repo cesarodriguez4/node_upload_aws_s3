@@ -2,6 +2,7 @@ const path = require('path')
 const fs = require('fs')
 const AWS = require('aws-sdk')
 const gm = require('gm')
+const async = require('async')
 
 
 function getFileExtension(filename) {
@@ -29,7 +30,7 @@ function changeExt(fileName, newExt) {
     return output
   }
 
-
+// A few files
 function upload() {  
     return new Promise((resolve, reject) => {
         console.log('Directory: ', __dirname)
@@ -43,15 +44,13 @@ function upload() {
             console.log('Scanning directory...') 
             const totalFiles = files.length
             console.log(`${totalFiles} files found`)
-            const allowedFormats = ['png', 'jpg', 'jpeg', 'gif']
+            const allowedFormats = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'webP' , 'PNG', 'JPG', 'JPEG', 'GIF', 'WEBP', 'SVG', 'svg']
             await files.forEach(async function (file, index) {
                 const ext = getFileExtension(file)
                 if(allowedFormats.includes(ext)) {
-        
                     const ID = 'YOUR_ID'
                     const SECRET = 'YOUR_SECRET'
                     const BUCKET_NAME = 'BUCKET_NAME'
-        
                     let Bucket = BUCKET_NAME+'/images'
                     const s3 = new AWS.S3({
                         accessKeyId: ID,
@@ -59,7 +58,7 @@ function upload() {
                     })
                     const filesToUpload = []
                     try {
-                        const exist = await s3.headObject({
+                        await s3.headObject({
                             Bucket: BUCKET_NAME+'/images',
                             Key: file,
                         }).promise()
@@ -127,12 +126,156 @@ function upload() {
     })
 }
 
-async function start() {
-    await upload()
+
+function transform() {  
+    return new Promise((resolve, reject) => {
+        console.log('Directory: ', __dirname)
+        const directoryPath = path.join(__dirname, '')
+        fs.readdir(directoryPath, async function (err, files) {
+            if (err) {
+                console.log('Error!')
+                console.log('Unable to scan directory: ' + err)
+                return reject('Unable to scan directory')
+            }
+            console.log('Scanning directory...') 
+            const totalFiles = files.length
+            console.log(`${totalFiles} files found`)
+            const allowedFormats = ['png', 'jpg', 'jpeg']
+            files.forEach(async function (file, index) {
+                const ext = getFileExtension(file)
+                if(allowedFormats.includes(ext.toLowerCase())) {
+                    // Uploading file
+                    console.log(`📁 File ${index+1} of ${totalFiles}`)
+                    console.log(`${totalFiles-(index+1)} files pending`)
+                    gm(file)
+                    .compress('JPEG')
+                    .write(file, async function(error) {
+                        console.log(`compressing file ${file}...`)   
+                    if (error) {
+                        console.log(`Error compressing JPEG`)
+                        console.log(error)
+                        return reject(`Error compressing JPEG`)
+                    }
+                    const newfile = changeExt(file, 'webp')
+                    const newFileDir = file.replace(file, newfile)
+                    gm(file)
+                    .toBuffer('webp', async (err, buffer) => {
+                    if (err) {
+                        console.log('Error creating webp')
+                        console.log(error)
+                        return reject('Error creating webp')
+                    }
+                    console.log('generating Webp...')
+                    await fs.promises.writeFile(newFileDir, buffer)
+                    console.log(`Webp ${file} Successfully created. ✅`)
+                })
+            })      
+        } else {
+            console.log(`❌ File ${file} is not an image, skipping...`)
+        }
+            })
+            resolve('Starting transformation.')
+        })
+    })
 }
 
-try {
-    start() 
-} catch(e) {
-    console.error(e)
+
+
+// Lots of files
+function asyncUpload() {
+    return new Promise((resolve, reject) => {
+        console.log('Directory: ', __dirname)
+        const directoryPath = path.join(__dirname, '')
+        const filesToUpload = []
+        fs.readdir(directoryPath, async function (err, files) {
+            if (err) {
+                console.log('Error!')
+                console.log('Unable to scan directory: ' + err)
+                return reject('Unable to scan directory')
+            }
+            console.log('Scanning directory...') 
+            const totalFiles = files.length
+            console.log(`${totalFiles} files found`)
+            const allowedFormats = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'webP', 'svg']
+            files.forEach(async function (file, index) {
+                const ext = getFileExtension(file)
+                if(allowedFormats.includes(ext.toLowerCase())) {
+                    // Uploading file
+                    console.log(`📁 File ${index+1} of ${totalFiles}`)
+                    console.log(`${totalFiles-(index+1)} files pending`)
+                    gm(file)
+                    .compress('JPEG')
+                    .write(file, async function(error) {
+                        console.log(`compressing file ${file}...`)   
+                    if (error) {
+                        console.log(`Error compressing JPEG`)
+                        console.log(error)
+                        return reject(`Error compressing JPEG`)
+                    }
+                    const fileContent = fs.readFileSync(file)
+                    const originalImage = {
+                    Bucket,
+                    Key: file,
+                    Body: fileContent
+                    }
+                    filesToUpload.push(originalImage)
+                    const newfile = changeExt(file, 'webp')
+                    const newFileDir = file.replace(file, newfile)
+                    gm(file)
+                    .toBuffer('webp', async (err, buffer) => {
+                    if (err) {
+                        console.log('Error creating webp')
+                        console.log(error)
+                        reject('Error creating webp')
+                    }
+                    if (!err) {
+                        console.log('generating Webp...')
+                        await fs.writeFile(newFileDir, buffer, async function() {
+                            const fileContent = fs.readFileSync(newFileDir)
+                            const webpImage = {
+                            Bucket,
+                            Key: newfile,
+                            Body: fileContent
+                            }
+                            filesToUpload.push(webpImage)
+                            // console.log(`File ${file} Successfully uploaded. ✅`)
+                            // unlinkUploadedImages(filesToUpload)
+                        })
+                    }
+                })
+            })  
+            } else {
+                console.log(`❌ File ${file} is not an image, skipping...`)  
+            }
+            })
+        })
+        const ID = 'ID'
+        const SECRET = 'SECRET'
+        const BUCKET_NAME = 'BUCKET_NAME'
+        const Bucket = BUCKET_NAME+'/images'
+        const s3 = new AWS.S3({accessKeyId: ID,secretAccessKey: SECRET})
+        const PARALLEL_UPLOADS = 10;
+        const q = async.queue((task, callback) => {
+            console.log('starting queue');
+            s3.upload(task, callback)
+        }, PARALLEL_UPLOADS);
+
+        q.drain = function() {
+            console.log('All items have been processed');
+            resolve('All items have been processed');
+        };
+        q.push([...filesToUpload]);
+        q();
+    })
 }
+
+async function start() {
+    try {
+        const res = await transform()
+        console.log(res); 
+    } catch(e) {
+        console.error(e)
+    }
+}
+
+start() 
